@@ -33,7 +33,7 @@ min_automake_version="1.14"
 m4_define([mym4_package],[libassuan])
 m4_define([mym4_major], [3])
 m4_define([mym4_minor], [0])
-m4_define([mym4_micro], [2])
+m4_define([mym4_micro], [3])
 
 # To start a new development series, i.e a new major or minor number
 # you need to mark an arbitrary commit before the first beta release
@@ -51,7 +51,9 @@ m4_define([mym4_isbeta],       m4_argn(2, mym4_verslist))
 m4_define([mym4_version],      m4_argn(4, mym4_verslist))
 m4_define([mym4_revision],     m4_argn(7, mym4_verslist))
 m4_define([mym4_revision_dec], m4_argn(8, mym4_verslist))
+m4_define([mym4_commitid],     m4_argn(9, mym4_verslist))
 m4_esyscmd([echo ]mym4_version[>VERSION])
+m4_esyscmd([echo ]mym4_commitid[>>VERSION])
 
 AC_INIT([mym4_package],[mym4_version],[https://bugs.gnupg.org])
 
@@ -63,7 +65,7 @@ AC_INIT([mym4_package],[mym4_version],[https://bugs.gnupg.org])
 #
 LIBASSUAN_LT_CURRENT=9
 LIBASSUAN_LT_AGE=0
-LIBASSUAN_LT_REVISION=1
+LIBASSUAN_LT_REVISION=2
 
 # If the API is changed in an incompatible way: increment the next counter.
 LIBASSUAN_CONFIG_API_VERSION=3
@@ -292,6 +294,9 @@ BUILD_REVISION="mym4_revision"
 AC_SUBST(BUILD_REVISION)
 AC_DEFINE_UNQUOTED(BUILD_REVISION, "$BUILD_REVISION",
                    [GIT commit id revision used to build this package])
+BUILD_COMMITID="mym4_commitid"
+AC_DEFINE_UNQUOTED(BUILD_COMMITID, "$BUILD_COMMITID",
+                   [Git commit id used to build this package])
 
 changequote(,)dnl
 BUILD_FILEVERSION=`echo "$VERSION" | sed 's/\([0-9.]*\).*/\1./;s/\./,/g'`
@@ -401,7 +406,7 @@ AM_CONDITIONAL(USE_DESCRIPTOR_PASSING, test "$use_descriptor_passing" = "yes")
 # Checking for libgpg-error.
 AM_PATH_GPG_ERROR(1.17,, AC_MSG_ERROR([libgpg-error was not found]))
 AM_CONDITIONAL(USE_GPGRT_CONFIG, [test -n "$GPGRT_CONFIG" \
-                                  -a "$ac_cv_path_GPG_ERROR_CONFIG" = no])
+                                  && test "$ac_cv_path_GPG_ERROR_CONFIG" = no])
 
 #
 # Checks for library functions.
@@ -466,8 +471,14 @@ AC_CHECK_MEMBER(struct sockpeercred.pid,
 # (Open)Solaris
 AC_CHECK_FUNCS([getpeerucred])
 
-# FreeBSD
+# FreeBSD and AIX
 AC_CHECK_FUNCS([getpeereid])
+# AIX is missing the declaration.
+AC_CHECK_DECLS([getpeereid],,, [[
+#include <sys/types.h>
+#include <unistd.h>
+#include <sys/socket.h>
+]])
 AC_CHECK_MEMBER(struct xucred.cr_pid,
 		[AC_DEFINE(HAVE_XUCRED_CR_PID, 1,
 		 Define if struct xucred contains the cr_pid member.)],
